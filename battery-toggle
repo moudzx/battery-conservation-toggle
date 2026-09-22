@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# 1. Check for Lenovo IdeaPad/V-Series binary conservation_mode
+LENOVO_IDEAPAD_SYSFS="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
+
+# 2. Check for Universal Linux charge_control_end_threshold (ThinkPad, ASUS, Dell, Framework, etc.)
+UNIVERSAL_SYSFS="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+
+if [ -f "$LENOVO_IDEAPAD_SYSFS" ]; then
+    CURRENT=$(cat "$LENOVO_IDEAPAD_SYSFS")
+    if [ "$CURRENT" -eq 0 ]; then
+        echo 1 | sudo tee "$LENOVO_IDEAPAD_SYSFS" > /dev/null
+        echo "Conservation Mode ENABLED (Capped at ~80%)."
+    else
+        echo 0 | sudo tee "$LENOVO_IDEAPAD_SYSFS" > /dev/null
+        echo "Conservation Mode DISABLED (Full charge to 100%)."
+    fi
+
+elif [ -f "$UNIVERSAL_SYSFS" ]; then
+    CURRENT=$(cat "$UNIVERSAL_SYSFS")
+    if [ "$CURRENT" -eq 100 ]; then
+        echo 80 | sudo tee "$UNIVERSAL_SYSFS" > /dev/null
+        echo "Charge Threshold ENABLED (Capped at 80%)."
+    else
+        echo 100 | sudo tee "$UNIVERSAL_SYSFS" > /dev/null
+        echo "Charge Threshold DISABLED (Full charge to 100%)."
+    fi
+
+else
+    echo "Error: No supported battery threshold interface found on this system."
+    exit 1
+fi
